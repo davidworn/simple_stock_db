@@ -3,3 +3,5 @@ db_host =
 db_user =
 db_pass =
 db_name =
+
+tiingo_API_key =

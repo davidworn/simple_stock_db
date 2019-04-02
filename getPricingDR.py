@@ -4,7 +4,7 @@ import pandas as pd
 pd.core.common.is_list_like = pd.api.types.is_list_like
 import pandas_datareader.data as web
 from ratelimiter import RateLimiter
-import dbconf.py
+import dbconf
 
 # Obtain a database connection to the MySQL instance
 db_host = dbconf.db_host
@@ -23,12 +23,9 @@ def obtain_list_of_db_tickers():
         return [(d[0], d[1]) for d in data]
 
 
-def get_daily_historic_data_iex(ticker):
-    """Obtains full historical data from IEX returns a list of tuples.
+def get_daily_historic_data_tiingo(ticker):
+    """Obtains full historical data from Tiingo returns a list of tuples.
   ticker: Ticker symbol, e.g. "GOOG" for Google, Inc."""
-    # time range
-    start = datetime.datetime(2015, 1, 1)
-    end = datetime.datetime(2018, 12, 31)
 
     # Construct the URL with the correct integer query parameters
     # av_json = urllib2.urlopen("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s&outputsize=full&apikey=YD2DLTZBJFNPFVX2" % (ticker))
@@ -36,10 +33,11 @@ def get_daily_historic_data_iex(ticker):
     # Try connecting to IEX and obtain the data
     # On failure, print an error message.
     try:
-        iex_data = web.DataReader(ticker, 'iex', start, end)
+        tiingo_data = web.get_data_tiingo(ticker, api_key=dbconf.tiingo_API_key)
+        tiingo_data = tiingo_data.reset_index('symbol')
         prices = []
-        for row in iex_data.itertuples():
-            prices.append((datetime.datetime.strptime(row.Index, '%Y-%m-%d'),
+        for row in tiingo_data.itertuples():
+            prices.append((row.Index.strftime('%Y-%m-%d'),
                           row.open,
                           row.high,
                           row.low,
@@ -47,7 +45,7 @@ def get_daily_historic_data_iex(ticker):
                           row.volume))
 
     except Exception, e:
-        print("Could not download IEX data: %s" % e)
+        print("Could not download Tiingo data: %s" % e)
     return prices
 
 
@@ -82,9 +80,9 @@ if __name__ == "__main__":
     # Loop over the tickers and insert the daily historical
     # data into the database
     tickers = obtain_list_of_db_tickers()
-    rate_limiter = RateLimiter(max_calls=1, period=30)
+    rate_limiter = RateLimiter(max_calls=1, period=2)
     for t in tickers:
         with rate_limiter:
             print("Adding data for %s" % t[1])
-            iex_prices = get_daily_historic_data_iex(t[1])
-            insert_daily_data_into_db('1', t[0], iex_prices)
+            tiingo_prices = get_daily_historic_data_tiingo(t[1])
+            insert_daily_data_into_db('1', t[0], tiingo_prices)
