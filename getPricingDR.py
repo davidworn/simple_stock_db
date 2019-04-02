@@ -4,13 +4,13 @@ import pandas as pd
 pd.core.common.is_list_like = pd.api.types.is_list_like
 import pandas_datareader.data as web
 from ratelimiter import RateLimiter
-import datetime
+import dbconf.py
 
 # Obtain a database connection to the MySQL instance
-db_host = '127.0.0.1'
-db_user = 'sec_user'
-db_pass = 'banesto1'
-db_name = 'securities_master'
+db_host = dbconf.db_host
+db_user = dbconf.db_user
+db_pass = dbconf.db_pass
+db_name = dbconf.db_name
 con = mdb.connect(db_host, db_user, db_pass, db_name)
 
 
@@ -46,7 +46,7 @@ def get_daily_historic_data_iex(ticker):
                           row.close,
                           row.volume))
 
-    except Exception as e:
+    except Exception, e:
         print("Could not download IEX data: %s" % e)
     return prices
 
